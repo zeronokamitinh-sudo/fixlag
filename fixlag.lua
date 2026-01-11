@@ -1,86 +1,62 @@
--- 1. XÓA BẦU TRỜI TUYỆT ĐỐI (VOID MODE)
+-- 1. TỐI ƯU BẦU TRỜI (KHÔNG LÀM ĐEN THUI MÀN HÌNH)
 local lighting = game:GetService("Lighting")
 
--- Xóa các hiệu ứng bầu trời trong Lighting
+-- Xóa các hiệu ứng gây lag nhưng giữ lại ánh sáng cơ bản
 for _, obj in pairs(lighting:GetDescendants()) do
-    if obj:IsA("Sky") or obj:IsA("Atmosphere") or obj:IsA("Clouds") or obj:IsA("PostEffect") then
+    if obj:IsA("Sky") or obj:IsA("Atmosphere") or obj:IsA("Clouds") then
         obj:Destroy()
     end
 end
 
--- Ép màu môi trường về tối hoàn toàn
-lighting.Ambient = Color3.fromRGB(0, 0, 0)
-lighting.OutdoorAmbient = Color3.fromRGB(0, 0, 0)
-lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
-lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
-lighting.ClockTime = 0 
-lighting.Brightness = 0
-lighting.GlobalShadows = false
+-- Chỉnh ánh sáng để nhìn thấy trong đêm (Không để về 0,0,0)
+lighting.Ambient = Color3.fromRGB(100, 100, 100) -- Tăng độ sáng môi trường để thấy đường
+lighting.OutdoorAmbient = Color3.fromRGB(100, 100, 100)
+lighting.Brightness = 2
+lighting.GlobalShadows = false -- Tắt đổ bóng để cực mượt
+lighting.ClockTime = 14 -- Chỉnh về buổi trưa để đủ sáng (hoặc giữ nguyên nếu bạn muốn đêm)
 
--- 2. SIÊU TỐI ƯU VẬT THỂ (GIỮ NGUYÊN LOGIC NHƯNG TĂNG TỐC)
+-- 2. SIÊU TỐI ƯU VẬT THỂ (XÓA TEXTURE)
 local function DeepClean(obj)
-    pcall(function() -- Dùng pcall để tránh lỗi khi gặp vật thể bị khóa
-        if obj:IsA("BasePart") then
-            obj.Material = Enum.Material.SmoothPlastic
-            obj.CastShadow = false
-            if obj.Size.Magnitude > 1000 then 
-                obj.Transparency = 1 
-                obj.CanCollide = false
-            end
-        elseif obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Explosion") then
-            obj:Destroy()
-        elseif obj:IsA("MeshPart") then
-            obj.TextureID = ""
-            obj.MeshId = "" -- Xóa cả Mesh để cực nhẹ nếu cần (tùy chọn)
-        end
-    end)
+    if obj:IsA("BasePart") then
+        obj.Material = Enum.Material.SmoothPlastic
+        obj.CastShadow = false
+    elseif obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+        obj:Destroy()
+    elseif obj:IsA("MeshPart") then
+        obj.TextureID = ""
+    end
 end
 
--- Quét workspace một cách an toàn
-for _, v in pairs(workspace:GetDescendants()) do 
-    DeepClean(v)
-end
+for _, v in pairs(workspace:GetDescendants()) do DeepClean(v) end
 workspace.DescendantAdded:Connect(DeepClean)
 
--- 3. FPS RAINBOW (FIX VỊ TRÍ & HIỆU SUẤT)
-local lp = game:GetService("Players").LocalPlayer
-local pgui = lp:WaitForChild("PlayerGui")
+-- 3. FPS RAINBOW (FIX VỊ TRÍ NÉ JOYSTICK)
+local pgui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pgui:FindFirstChild("FPS_Void") then pgui["FPS_Void"]:Destroy() end
 
 local sg = Instance.new("ScreenGui")
 sg.Name = "FPS_Void"
 sg.ResetOnSpawn = false
-sg.IgnoreGuiInset = true -- Tránh bị lệch do thanh trạng thái điện thoại
 sg.Parent = pgui
 
 local fpsLabel = Instance.new("TextLabel")
 fpsLabel.Parent = sg
--- Vị trí 0.72 như bạn chọn để né Joystick bên trái
-fpsLabel.Position = UDim2.new(0.05, 0, 0.72, 0) 
+fpsLabel.Position = UDim2.new(0.05, 0, 0.65, 0) -- Đẩy lên cao hơn một chút để không bị ngón cái che
 fpsLabel.Size = UDim2.new(0, 150, 0, 40)
 fpsLabel.BackgroundTransparency = 1
-fpsLabel.TextSize = 24
+fpsLabel.TextSize = 20
 fpsLabel.Font = Enum.Font.Arcade 
 fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local stroke = Instance.new("UIStroke", fpsLabel)
-stroke.Thickness = 1.5
+stroke.Thickness = 2
 
-local RunService = game:GetService("RunService")
 local lastUpdate = 0
-local count = 0
-
-RunService.RenderStepped:Connect(function(dt)
-    -- Hiệu ứng Rainbow
+game:GetService("RunService").RenderStepped:Connect(function(dt)
     fpsLabel.TextColor3 = Color3.fromHSV(tick() % 5 / 5, 0.8, 1)
-    
-    count = count + 1
     lastUpdate = lastUpdate + dt
-    
-    if lastUpdate >= 0.5 then
-        local fps = math.floor(count / lastUpdate)
-        fpsLabel.Text = "FPS: " .. fps
-        count = 0
+    if lastUpdate >= 0.8 then
+        fpsLabel.Text = "ZERONOKAMI FPS: " .. math.floor(1/dt)
         lastUpdate = 0
     end
 end)
